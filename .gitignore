@@ -1,0 +1,53 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+.yarn/
+
+# Build artefacts
+.next/
+.turbo/
+out/
+dist/
+build/
+*.tsbuildinfo
+
+# Convex (generated inside GovIQ at merge time)
+convex/_generated/
+
+# Environment — never commit secrets
+.env
+.env.local
+.env.*.local
+
+# Python venvs for scripts/sorting
+scripts/sorting/.venv/
+scripts/sorting/__pycache__/
+scripts/sorting/*.pyc
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# IDE (keep .vscode for shared config, but ignore user-local overrides)
+.idea/
+.vscode/*.local.json
+.DS_Store
+Thumbs.db
+
+# Test + coverage output
+coverage/
+.vitest-cache/
+
+# Customer data — NEVER commit any file that might contain real HSE content
+reference/*.xlsx
+reference/customer-data/
+test-fixtures/real/
+uploads/
+tmp/
+
+# Local scratch
+scratch/
+.scratch/
+next-env.d.ts

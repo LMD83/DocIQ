@@ -1,96 +1,94 @@
-# GovIQ DocRoute — Convex backend scaffold
+# GovIQ DocRoute — module staging repo
 
-First cut of the commercial SaaS wrapper around the Estate Record Spine engine.
-Delivers three things from the productisation brief:
+This repo is the **staging area** for the GovIQ DocRoute module before it
+gets merged into the GovIQ parent repo. It is not a standalone application.
 
-1. **`convex/schema.ts`** — multi-tenant Convex schema (§6 of the brief).
-2. **`convex/neis/`** — TypeScript port of `neis_parser.py` regex, normalisation,
-   and credibility scoring. Single source of truth for filename validation on
-   client + server.
-3. **`convex/seed/`** — seed loader that writes the NEIS convention and
-   originator registry to Convex on first run. All 8 HSE code tables are
-   embedded as TS constants so the seed is reproducible in any environment.
+DocRoute is a module inside the GovIQ platform. It reuses GovIQ core for
+tenancy, auth (Entra ID), memberships, audit events, billing, workpools, and
+cron. It contributes domain-specific `dr_*` tables and NEIS parsing /
+credibility logic for HSE Estates and other public-sector estate records.
+
+See `CLAUDE.md` for the engineering context and `MIGRATION.md` for the
+merge-into-GovIQ runbook (including the mandatory Session 0 schema
+reconciliation step).
 
 ## Layout
 
 ```
-goviq-docroute/
+.
+├── CLAUDE.md                         # Engineering context — read at every session
+├── MIGRATION.md                      # Merge-into-GovIQ runbook + Session 0 prompt
 ├── convex/
-│   ├── schema.ts                   # Full schema, multi-tenant
-│   ├── conventions.ts              # Queries/mutations for conventions + originators
-│   ├── lib/
-│   │   └── authz.ts                # Org membership + role checks
-│   ├── neis/
-│   │   ├── regex.ts                # Regex patterns (mirrors neis_parser.py)
-│   │   ├── parser.ts               # parse_filename() equivalent
-│   │   ├── normalise.ts            # DN / CMP canonicalisation
-│   │   ├── credibility.ts          # FIELD_WEIGHTS + score + route
-│   │   ├── viewTypes.ts            # Document view type map
-│   │   └── index.ts                # Barrel export
-│   └── seed/
-│       ├── seedData.ts             # Embedded code tables (source: your CSVs)
-│       ├── seedConventions.ts      # internalAction — seeds NEIS convention
-│       └── seedOriginators.ts      # internalAction — seeds originator registry
+│   └── docroute/                     # Lives under convex/docroute/ in GovIQ
+│       ├── schema.ts                 # Exports individual dr_* defineTable(...)
+│       ├── conventions.ts            # Queries/mutations, inline GovIQ auth
+│       ├── neis/                     # Regex, parser, normalise, credibility, viewTypes
+│       └── seed/                     # NEIS + ISO 19650 + originator seeds
 ├── tests/
-│   └── neis.test.ts                # Vitest fixtures (parity with Python __main__)
-├── package.json
-└── tsconfig.json
+│   └── neis.test.ts                  # Vitest parity fixtures with Python reference
+├── docs/                             # Product briefs (PRD, productisation, storage, commercial)
+├── reference/                        # Python reference parser + code-table CSVs
+│   ├── neis_parser.py
+│   └── code-tables/
+└── (no package.json, tsconfig.json, .env.example — inherited from GovIQ root)
 ```
 
-## Running
+## Why there's no package.json or tsconfig.json
 
-```bash
-# 1. Install
-npm install
+DocRoute inherits all dev config from the GovIQ root repo when merged. This
+staging repo intentionally doesn't ship its own Node/TS config — that's what
+makes the merge a drop-in rather than a reconciliation of two dependency
+trees.
 
-# 2. Initialise Convex (creates deployment, generates _generated/)
-npx convex dev
-
-# 3. In a second terminal, seed the global conventions + originators
-npx convex run seed/seedConventions:seedAll
-npx convex run seed/seedOriginators:seedGlobal
-
-# 4. Run tests
-npm test
-```
+If you need to run the parity tests before merge, clone into a GovIQ-sized
+environment (Node 20, vitest, convex) and run `vitest run tests/neis.test.ts`.
 
 ## Design decisions worth knowing
 
-- **Conventions are data, not code.** NEIS Rev 11 lives in Convex rows you can
-  version and swap. Custom conventions for non-HSE customers use the same
-  shape.
+- **Module, not standalone.** No `organisations` / `users` / `memberships` /
+  `auditEvents` tables — DocRoute references the GovIQ-core equivalents
+  (`sp_organisations`, `sp_users`, `gov_memberships`, `gov_auditEvents`).
+- **dr_\* table prefix.** Every DocRoute-owned table is prefixed, matching
+  GovIQ's `sp_*` / `gov_*` / `core_*` convention.
+- **Conventions are data, not code.** NEIS Rev 11 lives in `dr_conventions`
+  rows you can version and swap. Custom conventions for non-HSE customers
+  use the same shape.
 - **Global vs org-scoped rows.** NEIS and ISO 19650 are seeded with
   `orgId: undefined` — visible to every tenant. Custom conventions carry an
   `orgId` and are only visible to that tenant.
-- **Regex lives in one TS module** (`convex/neis/regex.ts`). Both client-side
-  upload validation and server-side worker parse import from the same source.
-  The Python `neis_parser.py` is the reference implementation; the TS module
-  mirrors it exactly and is tested against the same fixtures.
-- **Credibility scoring** (`credibility.ts`) reproduces `FIELD_WEIGHTS`,
-  `LICENCE_PENALTIES`, and `CREDIBILITY_GATES` byte-for-byte from the Python
-  parser. Any change to weights must update both; a parity test in
-  `tests/neis.test.ts` guards against drift.
-- **Schema covers the full product vision** (billing, sites, registers,
-  synopses) so you do not need a destructive migration later. The MVP path only
-  writes to a subset of these tables.
+- **Regex lives in one TS module** (`convex/docroute/neis/regex.ts`). Both
+  client-side upload validation and server-side parsing import from the same
+  source. The Python `reference/neis_parser.py` is the reference
+  implementation; the TS module mirrors it and is tested against the same
+  fixtures.
+- **Credibility scoring** reproduces `FIELD_WEIGHTS`, `LICENCE_PENALTIES`,
+  and `CREDIBILITY_GATES` byte-for-byte from the Python parser. A parity
+  test in `tests/neis.test.ts` guards against drift.
+- **Schema covers the full product vision** (sites, buildings, review queue,
+  register entries, synopsis) so the MVP path does not need a destructive
+  migration later.
 
-## What this scaffold does not include yet
+## What's not in this staging repo
 
-These come in subsequent drops, in this order:
+These come in subsequent sessions after the module is merged into GovIQ:
 
-1. JSON schemas per convention for Claude structured extraction
+1. Extraction prompts (`convex/docroute/extraction/prompts/`, one file per doc-type)
 2. Document ingest pipeline (upload → hash → classify → parse → extract → score → route)
-3. Review queue UI (Next.js + shadcn/ui)
-4. Register export (XLSX) and synopsis generation
-5. Storage adapter interface (SMB, SharePoint, Aconex)
-6. Stripe billing integration
-7. Observability wiring (Axiom / Logtail)
+3. Storage adapter interface (R2, SMB, Azure Blob, OVH)
+4. Upload UI (Next.js page in the GovIQ root app)
+5. Review queue UI
+6. Register export (XLSX) and synopsis generation
+7. Observability wiring (through GovIQ's existing pipeline)
+
+Billing is handled at the GovIQ platform level — no DocRoute-specific
+subscriptions, usage counters, or Stripe wiring.
 
 ## Cross-reference
 
-- Estate Record Spine PRD v1.0 — engine architecture, credibility model,
-  canonical taxonomy.
-- NEIS File Naming Convention Rev 11 (HSE) — the convention this scaffold
-  seeds.
-- `neis_parser.py` — Python reference implementation for the worker side.
-- Productisation Brief v0.1 — commercial wrapper scope.
+- `CLAUDE.md` — engineering context, decisions locked, hard rules
+- `MIGRATION.md` — merge runbook with Session 0 reconciliation prompt
+- `docs/00-initial-prd-draft.md` — engine spec
+- `docs/02-productisation-brief.md` — commercial SaaS wrapper scope
+- `docs/99-neis-convention-rev11.pdf` — source standard
+- `reference/neis_parser.py` — Python reference implementation (do not modify
+  without updating the TS port and the parity tests)

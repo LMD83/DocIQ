@@ -1,104 +1,161 @@
-# Migrating from web chat to Claude Code
+# Merging DocRoute into the GovIQ repo
 
-Step-by-step handoff for GovIQ DocRoute. Follow in order. Total time: ~30 minutes if the prerequisites are already in place.
+DocRoute is a **module inside the GovIQ platform**, not a standalone app.
+This guide describes how to merge the module source into the GovIQ repo,
+reconcile it against the real GovIQ schema, and get it deployed on the
+existing GovIQ Convex deployment. Total time: ~60 minutes if GovIQ is
+already running locally.
+
+This file replaces the old "standalone scaffold" migration guide.
 
 ---
 
 ## Prerequisites
 
-You need these installed on your machine before starting:
+- You already have the GovIQ repo checked out locally and `npx convex dev`
+  runs cleanly against the shared deployment (`different-dolphin-62.eu-west-1.convex.cloud`).
+- Node.js 20+, npm/pnpm, git, **Claude Code** installed.
+- You're an admin on the GovIQ Convex deployment (you'll be seeding global
+  rows).
 
-- **Node.js 20+** (`node -v` to check; install via nvm if missing)
-- **npm or pnpm**
-- **Git** and a GitHub account
-- **Claude Code** — install with `npm install -g @anthropic-ai/claude-code` (requires an Anthropic account; log in with `claude` once installed)
-
-Optional but useful:
-- **Convex CLI** (installs with `npm install` in the repo)
-- **gh** (GitHub CLI) for one-command repo creation
-
-You need accounts for:
-- **GitHub** (for the repo)
-- **Anthropic Console** (for the Claude API key — `console.anthropic.com`)
-- **Convex** (`dashboard.convex.dev`)
-- **Cloudflare** (free tier is fine to start — `dash.cloudflare.com`)
-- **Vercel** when you're ready to deploy a frontend (not needed for the first Claude Code session)
+No separate accounts are required — DocRoute uses the GovIQ Anthropic key,
+Convex deployment, storage credentials, and billing. All secrets stay at the
+GovIQ deployment level (`npx convex env set KEY value`).
 
 ---
 
-## Step 1 — Extract the scaffold
+## Step 1 — Copy the module into the GovIQ tree
 
-Download `goviq-docroute-scaffold.zip` (the bundle from the previous message) to your machine and extract it to wherever you keep code. I'll assume `~/code/goviq-docroute` below.
+From the GovIQ repo root:
 
-```bash
-cd ~/code
-unzip ~/Downloads/goviq-docroute-scaffold.zip
-cd goviq-docroute
+```
+cp -r /path/to/dociq/convex/docroute convex/docroute
+cp -r /path/to/dociq/docs             docs/docroute
+cp -r /path/to/dociq/reference        reference/docroute
+cp    /path/to/dociq/tests/neis.test.ts tests/docroute.neis.test.ts
+cp    /path/to/dociq/CLAUDE.md        convex/docroute/CLAUDE.md
+cp    /path/to/dociq/MIGRATION.md     convex/docroute/MIGRATION.md
 ```
 
-Verify the layout:
+Do **not** copy `package.json`, `tsconfig.json`, `.gitignore`, or
+`.env.example` from the DocRoute repo — those are inherited from the GovIQ
+root. The DocRoute staging repo deliberately doesn't ship these.
 
-```bash
-ls -la
-# You should see: CLAUDE.md, README.md, package.json, tsconfig.json,
-# .gitignore, .env.example, convex/, tests/, docs/, reference/
+The GovIQ tree should now contain:
+
+```
+convex/
+├── schema.ts                      # existing GovIQ root schema
+├── _generated/                    # existing
+├── ...                            # existing GovIQ modules
+└── docroute/                      # NEW — module lives here
+    ├── schema.ts                  # exports individual dr_* defineTable(...)
+    ├── conventions.ts             # queries + mutations, inline GovIQ auth
+    ├── neis/                      # regex, parser, normalise, credibility, viewTypes, index
+    ├── seed/                      # seedData, seedConventions, seedOriginators
+    ├── CLAUDE.md                  # DocRoute engineering context
+    └── MIGRATION.md               # this file
+tests/
+└── docroute.neis.test.ts          # parity fixtures
+docs/docroute/                     # product briefs (moved for scoping)
+reference/docroute/                # Python reference + code-table CSVs
 ```
 
-If any of those are missing, stop and re-download.
+## Step 2 — Merge `dr_*` tables into the root schema
 
-## Step 2 — Initialise git and push to GitHub
+Edit GovIQ's root `convex/schema.ts`:
 
-```bash
-git init
-git add .
-git commit -m "Initial scaffold — schema, NEIS parser port, seeds, parity tests"
+```ts
+import { defineSchema } from "convex/server";
+import * as dr from "./docroute/schema";
+// ... existing imports
 
-# If you have gh CLI:
-gh repo create goviq-docroute --private --source=. --push
+export default defineSchema({
+  // ... existing GovIQ tables: sp_organisations, sp_users,
+  //                           gov_memberships, gov_auditEvents,
+  //                           sp_procurements, documentPool, ...
 
-# Or create the repo manually on github.com then:
-git remote add origin git@github.com:YOUR_USERNAME/goviq-docroute.git
-git branch -M main
-git push -u origin main
+  dr_conventions:         dr.dr_conventions,
+  dr_originatorRegistry:  dr.dr_originatorRegistry,
+  dr_folderTrees:         dr.dr_folderTrees,
+  dr_projects:            dr.dr_projects,
+  dr_projectMembers:      dr.dr_projectMembers,
+  dr_sites:               dr.dr_sites,
+  dr_buildings:           dr.dr_buildings,
+  dr_documents:           dr.dr_documents,
+  dr_reviewQueue:         dr.dr_reviewQueue,
+  dr_registerEntries:     dr.dr_registerEntries,
+  dr_synopsisSnapshots:   dr.dr_synopsisSnapshots,
+});
 ```
 
-**Private repo. Not public.** This contains HSE convention details and the Estate Spine PRD — both are HSE intellectual property. Keep the repo private until you have explicit permission to publish anything.
+Save. Do NOT run `npx convex dev` yet — Step 3 reconciles placeholder
+references first.
 
-## Step 3 — Install dependencies and verify the parity tests pass
+## Step 3 — Session 0: schema reconciliation (MANDATORY)
 
-```bash
-npm install
-npm run typecheck
-npm test
+The DocRoute scaffold was written without direct access to the real GovIQ
+schema, so several references are placeholders. You must reconcile them
+before the first deploy or `npx convex dev` will fail.
+
+Start Claude Code from the **GovIQ repo root** and paste this prompt:
+
+> Run Session 0 — schema reconciliation for the DocRoute module.
+>
+> Read these GovIQ files first:
+> - `convex/schema.ts` — the root schema with GovIQ's existing tables
+> - `convex/auth.ts` (or wherever GovIQ resolves Convex identity → user row)
+> - Any `convex/lib/*.ts` that has membership-check helpers
+> - The table definitions for `sp_organisations`, `sp_users`,
+>   `gov_memberships`, `gov_auditEvents`, and `sp_procurements` (or
+>   whichever procurement-equivalent table GovIQ uses)
+>
+> Then read:
+> - `convex/docroute/schema.ts`
+> - `convex/docroute/conventions.ts`
+> - `convex/docroute/seed/seedConventions.ts`
+> - `convex/docroute/seed/seedOriginators.ts`
+>
+> Fix every `TODO(session-0)` marker by reconciling against the real GovIQ
+> shape. Specifically:
+>
+> 1. In `convex/docroute/schema.ts`: confirm `sp_organisations`,
+>    `sp_users`, `sp_procurements` are the correct FK table names. If
+>    GovIQ uses different names, rename every `v.id("...")` reference.
+>    (`sp_procurements` is optional — if GovIQ doesn't model a
+>    procurement-equivalent entity, remove the `procurementId` field from
+>    `dr_projects` or adjust the FK.)
+>
+> 2. In `convex/docroute/conventions.ts`: replace the inline `requireUser`
+>    / `requireOrgMember` / `requireOrgRole` / `writeAudit` helpers with
+>    imports from GovIQ's existing auth helpers if they exist. If not, fix
+>    the field/index names:
+>    - `sp_users` index `by_authSubject` and field `authSubject` → real names
+>    - `gov_memberships` index `by_userId_orgId` and field `role` → real names
+>    - `gov_auditEvents` row shape: confirm the `actor` / `eventType` /
+>      `after` / `timestamp` fields match real shape; map payloads as needed.
+>
+> 3. Confirm the role vocabulary in `ORG_ROLE_RANK` matches
+>    `gov_memberships.role` values.
+>
+> 4. Run `npx convex dev` and fix any type errors until the schema deploys
+>    cleanly.
+>
+> 5. Run `npm test` and confirm all NEIS parity fixtures pass.
+>
+> Report every change made, with the real field/table name you mapped
+> each placeholder to. Do NOT modify any GovIQ core table. Do NOT add new
+> dependencies.
+
+When Claude Code reports done, spot-check the changes it made, then commit.
+
+## Step 4 — Seed global conventions and originators
+
+From the GovIQ repo root:
+
 ```
-
-Expected: all tests pass. If they don't, stop and flag it before Claude Code touches anything — the parity tests are the contract with `neis_parser.py` and they must be green before any new feature work.
-
-## Step 4 — Create local env file
-
-```bash
-cp .env.example .env.local
-```
-
-Fill in at minimum:
-- `ANTHROPIC_API_KEY` (from `console.anthropic.com`)
-- Leave Convex blank for now — next step generates these
-
-## Step 5 — Provision Convex
-
-```bash
-npx convex dev
-```
-
-This prompts you to log in the first time, creates a new project, generates `convex/_generated/`, and writes the `CONVEX_DEPLOYMENT` and `NEXT_PUBLIC_CONVEX_URL` values. Choose **EU region** when prompted (this is important for HSE and the productisation brief's compliance story).
-
-Leave `npx convex dev` running in its own terminal — it watches for schema changes and redeploys.
-
-In a **second terminal**:
-
-```bash
-# Seed global conventions + originator registry
-npm run seed:all
+npx convex run docroute/seed/seedConventions:seedAll
+npx convex run docroute/seed/seedOriginators:seedGlobal
 ```
 
 Expected output:
@@ -108,165 +165,112 @@ Seeded ISO 19650: created (jh...)
 Originator registry: 5 created, 0 updated
 ```
 
-## Step 6 — Start Claude Code
+Both scripts are idempotent — safe to re-run.
 
-From the repo root:
+## Step 5 — Wire a developer npm script (optional)
 
-```bash
-claude
+Add to GovIQ root `package.json` scripts:
+
+```json
+"docroute:seed": "npx convex run docroute/seed/seedConventions:seedAll && npx convex run docroute/seed/seedOriginators:seedGlobal",
+"docroute:test": "vitest run tests/docroute.neis.test.ts"
 ```
 
-First thing it does: reads `CLAUDE.md`. This loads every decision, constraint, and standard we set in web chat. You don't need to re-explain any of it.
+So developers can `npm run docroute:test` without remembering paths.
 
-Verify it picked up the context with a first low-stakes prompt:
+## Step 6 — Verify parity tests pass
 
 ```
-What's built in this repo, what's not, and what's the next priority?
+npm test
 ```
 
-If the answer matches §5 and §6 of CLAUDE.md, the handoff worked. If it doesn't, check that `CLAUDE.md` is in the repo root (not in a subfolder) and restart `claude`.
+The DocRoute NEIS fixtures must remain green — they are the contract with
+`reference/docroute/neis_parser.py`. Any red here before you touch feature
+code means the merge introduced drift; fix before proceeding.
+
+## Step 7 — Commit, open a feature branch, move on to Session 1
+
+```
+git checkout -b feature/docroute-module-merge
+git add convex/docroute docs/docroute reference/docroute tests/docroute.neis.test.ts convex/schema.ts package.json
+git commit -m "Merge GovIQ DocRoute module (schema + NEIS parser + seeds)"
+git push -u origin feature/docroute-module-merge
+```
+
+Open a PR for review. DocRoute feature work (ingest pipeline, upload UI,
+review queue) proceeds in subsequent sessions on top of this merge.
 
 ---
 
-## First three sessions — suggested prompts
+## Session 1 prompt (for after the merge is green)
 
-Paste these as-is. They're framed to match what's in §6 of `CLAUDE.md`.
-
-### Session 1 — Document ingest pipeline (biggest-leverage piece)
-
-```
-Build the document ingest pipeline described in CLAUDE.md §6 point 1.
-
-Requirements:
-- HTTP action in convex/documents.ts that accepts an upload for a given project
-- Stores the file in Convex file storage (we'll add the adapter pattern in session 2 — don't do it here)
-- Computes SHA256; dedupes against `by_project_sha` index on the documents table
-- Runs the TS parser from convex/neis/parser.ts on the filename
-- Triggers an internal action that:
-    - Loads the convention for the project
-    - Extracts text from PDF (pdf-parse), DOCX (mammoth), XLSX (SheetJS) based on mime
-    - Calls Claude via Anthropic SDK with structured output; schema is derived from convention.fields
-    - Uses sha256 as cache key to skip re-extraction
-    - Computes per-field confidence, runs scoringFromParser + recordCredibility
-    - Sets document.status and writes extracted fields
-    - Emits auditEvents at: uploaded, extracted, scored, routed
-- Respects the licence status when a student watermark is detected (-0.15 penalty)
-- p95 < 30s per file per CLAUDE.md §7
-
-Use Anthropic SDK v0.x; pin the version. Write unit tests for the dedupe path
-and the confidence-map translation. Don't touch the storage adapter interface 
-yet — hardcode Convex file storage for this session.
-
-Start by writing a short plan for my review before any code.
-```
-
-### Session 2 — Storage adapter interface
-
-```
-Implement the storage adapter interface per CLAUDE.md §3 (D3) and 
-docs/03-storage-brief.md §3.
-
-Requirements:
-- Abstract StorageAdapter interface with put, get, delete, getUrl
-- ConvexStorageAdapter (current default for SaaS tenants)
-- R2Adapter (Cloudflare R2 with EU jurisdiction lock; use aws-sdk v3 
-  s3 client pointed at R2 endpoint)
-- SmbAdapter (stub only; mark as TODO — HSE pilot will use this but 
-  we don't have SMB credentials yet)
-- Adapter selected per project via a projects.storageAdapter field 
-  (add to schema)
-- Update documents.ts from session 1 to use the adapter instead of 
-  hardcoded Convex file storage
-- Config read from env; env keys match .env.example
-
-Do not write the SMB adapter implementation — just the interface and a 
-NotImplementedError stub. Write integration tests for ConvexStorageAdapter 
-and R2Adapter. Plan first, code after my review.
-```
-
-### Session 3 — Upload UI (first user-visible surface)
-
-```
-Next.js 15 upload page per CLAUDE.md §6 point 3.
-
-Requirements:
-- New Next.js app under app/ using the App Router
-- Page at /projects/[projectId]/upload
-- Drag-and-drop zone + file input; single and bulk (max 500 files, 2GB batch)
-- For each file in the drop: immediately run parseFilename from 
-  convex/neis/parser.ts client-side and show the pattern matched 
-  (full / min / none) with a green/amber/red indicator
-- On submit: upload each file via the action built in session 1
-- Stream status updates via Convex subscription on the documents table
-- Use shadcn/ui components (read mnt/skills/public/frontend-design/SKILL.md 
-  first if the skill is available; otherwise stick to clean Tailwind)
-- Mobile-responsive
-
-Do not build the review queue UI yet — that's session 4. Just upload + 
-live status. Plan first.
-```
-
----
-
-## Ongoing workflow
-
-### When to use Claude Code vs when to come back to chat
-
-**Claude Code is right for:**
-- Writing new modules and features
-- Fixing bugs and running tests
-- Refactoring
-- Dependency upgrades and migrations
-- Anything that touches multiple files and needs to run the code
-
-**Come back to chat for:**
-- Strategic decisions you want me to push back on
-- New PRDs or architectural briefs
-- Commercial / pricing exercises (like the HSE commercial model)
-- Multi-stakeholder framing (investor deck, HSE procurement pack, customer sales assets)
-- Second-opinion reviews of Claude Code's work
-
-Claude Code updates `docs/` locally as it builds. When it finishes a significant piece of work, commit, push, and come back to chat with a link to the repo if you want a strategic review of where things stand.
-
-### Updating CLAUDE.md
-
-Keep it current. Every time a decision moves from "open" to "locked," edit §2 of `CLAUDE.md` and commit the change. Every time a piece of work completes, move it from §6 to §5. A stale CLAUDE.md rots the whole handoff.
-
-### Skills (optional, advanced)
-
-Claude Code supports skills — reusable prompt packs that load on demand. If you find yourself repeating the same instructions ("always validate tenant access before any query"), lift them into a skill under `.claude/skills/`. Not needed for the first few sessions.
-
-### Secrets discipline
-
-- `.env.local` never leaves your laptop
-- `npx convex env set KEY value` for secrets the Convex runtime needs
-- Vercel environment variables for frontend deployments
-- Never paste API keys into Claude Code prompts — it uses them via env reads, not prompt text
-- Rotate any key that accidentally enters a prompt or commit
+> Build the document ingest pipeline described in
+> `convex/docroute/CLAUDE.md` §6 point 1.
+>
+> Requirements:
+> - HTTP action in `convex/docroute/documents.ts` that accepts an upload
+>   for a given `dr_projects` row
+> - Stores the file via the existing GovIQ file storage (adapter work is
+>   Session 2; this session hardcodes Convex file storage)
+> - Computes SHA256; dedupes against `by_project_sha` index on `dr_documents`
+> - Runs `parseFilename` from `convex/docroute/neis/parser.ts` on the name
+> - Enqueues an internal action on the existing GovIQ `documentPool` that:
+>     - Loads the convention for the project from `dr_conventions`
+>     - Extracts text from PDF (pdf-parse), DOCX (mammoth), XLSX (SheetJS)
+>     - Calls Claude via Anthropic SDK with structured output, schema
+>       derived from `convention.fields`. Prompt lives at
+>       `convex/docroute/extraction/prompts/<docType>.ts` as a
+>       first-class artefact, NOT a string inside a handler.
+>     - Uses sha256 as cache key to skip re-extraction
+>     - Computes per-field confidence, runs `scoringFromParser` +
+>       `recordCredibility`
+>     - Sets `dr_documents.status` and writes extracted fields
+>     - Emits `gov_auditEvents` rows at: uploaded, extracted, scored, routed
+>       — each with `eventType = "docroute.document.<action>"`
+> - Respects licence status (-0.15 penalty when student watermark detected)
+> - p95 < 30s per file
+>
+> Use the Anthropic SDK pinned in the GovIQ root `package.json` (add it if
+> missing, pin the major version). Write unit tests for the dedupe path
+> and the confidence-map translation. Do not touch the storage adapter
+> interface yet.
+>
+> Start by writing a short plan for my review before any code.
 
 ---
 
 ## If something goes wrong
 
-- **`npm test` fails after a Claude Code session:** the parity fixtures broke. Don't merge. `git diff` against main and check whether `convex/neis/regex.ts`, `parser.ts`, `normalise.ts`, or `credibility.ts` changed without an explicit reason. If it changed, roll back — those files are the Python-parity contract and should only change with a coordinated PR to `reference/neis_parser.py`.
-- **`npx convex dev` won't start:** check you're logged in (`npx convex login`); check the deployment region is set.
-- **Claude Code doesn't seem to have the context:** `CLAUDE.md` isn't being read. Must be at repo root, not in a subfolder. Also check file is named exactly `CLAUDE.md` (case-sensitive on Linux/macOS).
-- **Auth errors from Anthropic API:** key isn't set, or isn't set in the right environment. For Convex actions it needs to be `npx convex env set ANTHROPIC_API_KEY ...`, not just in `.env.local`.
+- **`npx convex dev` fails with `Type 'sp_something' does not exist`:**
+  Session 0 wasn't completed. Go back to Step 3.
+- **`npm test` fails after the merge:** parity fixtures broke. `git diff`
+  against `main` and check whether anything in
+  `convex/docroute/neis/regex.ts`, `parser.ts`, `normalise.ts`, or
+  `credibility.ts` changed without an explicit reason. If so, roll back —
+  those files are the Python-parity contract and only change with a
+  coordinated PR to `reference/docroute/neis_parser.py`.
+- **`gov_auditEvents` insert fails with "missing field":** the DocRoute
+  `writeAudit` helper guessed at the row shape. Open
+  `convex/docroute/conventions.ts` and adjust the insert to match the
+  real `gov_auditEvents` shape (this is the kind of thing Session 0
+  should have caught — double-check it did).
+- **Seeds fail with "Table not found":** the schema merge in Step 2 wasn't
+  saved, or `npx convex dev` didn't redeploy. Restart it and confirm the
+  new tables appear in the dashboard.
 
 ---
 
 ## Checklist — have I done everything?
 
-- [ ] Scaffold extracted to local machine
-- [ ] `git init` done; repo pushed to private GitHub
-- [ ] `npm install` succeeded
-- [ ] `npm test` passes (parity with Python parser)
-- [ ] `.env.local` filled with Anthropic key
-- [ ] `npx convex dev` running in a terminal
-- [ ] `npm run seed:all` completed
-- [ ] Cloudflare R2 bucket created with EU jurisdiction lock
-- [ ] R2 credentials in `.env.local` (can wait until session 2)
-- [ ] `claude` launched; confirmed CLAUDE.md was read
-- [ ] First session prompt pasted; plan received and reviewed before any code
+- [ ] Files copied into GovIQ tree per Step 1
+- [ ] `dr_*` tables added to root `convex/schema.ts`
+- [ ] Session 0 completed; every `TODO(session-0)` reconciled
+- [ ] `npx convex dev` deploys cleanly against shared GovIQ deployment
+- [ ] `npm run docroute:seed` completed; two conventions + five originators live
+- [ ] `npm test` green, NEIS parity fixtures all pass
+- [ ] Feature branch pushed, PR opened
+- [ ] `CLAUDE.md` (at `convex/docroute/CLAUDE.md`) reviewed by Liam before
+      Session 1 starts
 
-When every box is ticked you're in the new workflow. Web chat remains available for strategy and cross-cutting questions.
+When every box is ticked, DocRoute is live as a module inside GovIQ and
+the next session can start on the ingest pipeline.

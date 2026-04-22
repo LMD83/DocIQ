@@ -1,0 +1,6 @@
+code,description
+S,Issued (not yet accepted or reviewed)
+A,Accepted
+B,Accepted subject to comments
+C,Rejected
+D,Acceptance not required

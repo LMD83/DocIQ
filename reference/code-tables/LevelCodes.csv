@@ -1,0 +1,14 @@
+code,description,group
+L00,Ground Floor,Above Ground
+L01,First Floor,Above Ground
+L02,Second Floor,Above Ground
+L03,Third Floor,Above Ground
+L04,Fourth Floor,Above Ground
+L05,Fifth Floor,Above Ground
+M00,Ground Mezzanine,Mezzanine
+M01,First Mezzanine,Mezzanine
+B01,First Basement,Below Ground
+B02,Second Basement,Below Ground
+DTM,Datum,Special
+XXX,No Level,Special
+ZZZ,Multiple Levels,Special

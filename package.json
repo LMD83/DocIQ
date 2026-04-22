@@ -1,0 +1,25 @@
+{
+  "name": "goviq-docroute",
+  "version": "0.1.0",
+  "private": true,
+  "description": "GovIQ DocRoute — commercial SaaS wrapper around the Estate Record Spine engine",
+  "type": "module",
+  "scripts": {
+    "dev": "convex dev",
+    "deploy": "convex deploy",
+    "seed:conventions": "convex run seed/seedConventions:seedAll",
+    "seed:originators": "convex run seed/seedOriginators:seedGlobal",
+    "seed:all": "npm run seed:conventions && npm run seed:originators",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "convex": "^1.13.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "typescript": "^5.4.0",
+    "vitest": "^1.6.0"
+  }
+}

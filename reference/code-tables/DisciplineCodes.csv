@@ -1,0 +1,41 @@
+code,description,group
+AR,Architect,Design
+BS,Building Surveyor,Survey
+CE,Civil Engineer,Design
+CM,Cost Manager / Quantity Surveyor,Cost
+CN,Contractor,Construction
+DE,Drainage Engineer,Design
+EE,Electrical Engineer,Design
+EN,Environmental Consultant,Design
+FM,Facilities Manager,Operations
+FO,Facility Owner / Representative,Operations
+GS,Geospatial / Land Surveyor,Survey
+HS,Health and Safety Manager,Safety
+IA,Interior Architect,Design
+IC,Instrumentation and Control Engineer,Design
+IM,Information Manager,Information
+LA,Landscape Architect,Design
+LS,Life Safety Engineer,Safety
+ME,Mechanical Engineer,Design
+PE,Public Health Engineer,Design
+PL,Town Planner,Planning
+PM,Project Manager,Management
+SC,Subcontractor,Construction
+SD,Specialist Designer,Design
+SE,Structural Engineer,Design
+SF,Software Engineer,Information
+SS,Security Specialist,Safety
+TE,Communications Engineer,Design
+VZ,Visualisation,Design
+AC,Assigned Certifier,Certifier
+AN,Ancillary Certifier,Certifier
+BI,BIM Information Manager,Information
+BM,BIM Manager,Information
+DC,Design Certifier,Certifier
+ER,Employer's Representative,Management
+EX,Energy Expert,Design
+FS,Fire Safety Consultant,Safety
+PC,Project Supervisor Construction Stage (PSCS),Safety
+PD,Project Supervisor Design Process (PSDP),Safety
+TA,Technical Advisor,Management
+ZZ,General / Non-Disciplinary,Special

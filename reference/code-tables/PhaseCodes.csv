@@ -1,0 +1,9 @@
+code,description
+PH01,Phase 1
+PH02,Phase 2
+PH03,Phase 3
+PH04,Phase 4
+PH1A,Phase 1A (Sub-phase)
+PH1B,Phase 1B (Sub-phase)
+PHXX,No Phase / Not Phased
+PHZZ,All Phases / Multi-phase

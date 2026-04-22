@@ -1,0 +1,54 @@
+code,description,group
+10,Prepared Site,Substructure
+11,Ground/Earth Shapes,Substructure
+13,Floors in Substructure,Substructure
+16,Foundations/Rising Walls,Substructure
+17,Piled Foundations,Substructure
+20,Site Structures,Superstructure
+21,External Walls,Superstructure
+22,Internal Walls,Superstructure
+23,Floors,Superstructure
+24,Stairs/Ramps,Superstructure
+27,Roofs,Superstructure
+28,Frames,Superstructure
+30,Site Enclosures,Completions
+31,External Wall Completions,Completions
+32,Internal Wall Completions,Completions
+33,Floor Completions,Completions
+34,Stair Completions,Completions
+35,Suspended Ceilings,Completions
+37,Roof Completions,Completions
+40,Roads/Paths,Finishes
+41,Wall Finishes General,Finishes
+42,Wall Finishes Internal,Finishes
+43,Floor Finishes,Finishes
+44,Stair Finishes,Finishes
+45,Ceiling Finishes,Finishes
+47,Roof Finishes,Finishes
+50,Site Services - Mechanical,Mechanical
+51,Heating Centre,Mechanical
+52,Drainage,Mechanical
+53,Water Distribution,Mechanical
+54,Gas Distribution,Mechanical
+55,Space Cooling,Mechanical
+56,Space Heating,Mechanical
+57,Ventilation and Air Conditioning,Mechanical
+58,Other Mechanical and Electrical,Mechanical
+60,Site Services - Electrical,Electrical
+61,Electrical Supply/Main,Electrical
+62,Power,Electrical
+63,Lighting,Electrical
+64,Communications,Electrical
+65,Security/Protection,Electrical
+66,Transport,Electrical
+68,Other Electrical,Electrical
+70,Site Fittings,Fittings
+71,Display/Circulation Fittings,Fittings
+72,Work/Rest/Play Fittings,Fittings
+73,Culinary Fittings,Fittings
+74,Sanitary Fittings,Fittings
+75,Cleaning/Maintenance Fittings,Fittings
+76,Storage/Screening Fittings,Fittings
+80,Landscape/Play Areas,External
+XX,No Associated Element,Special
+ZZ,Multiple Elements,Special

@@ -1,0 +1,54 @@
+code,description,group
+AG,Agenda,Meeting
+AF,Animation,Media
+BQ,Bill of Quantities,Cost
+CA,Calculations,Technical
+CE,Certificate,Governance
+CH,Chart,Information
+CR,Clash Rendition,BIM
+CM,Combined Model,BIM
+CC,Contract,Contractual
+DR,Drawing,Graphical
+ER,Employer Records,Governance
+ES,Estimate,Cost
+FE,Fee Proposal,Commercial
+GD,Geographic Information System,Spatial
+IM,Image,Media
+IE,Information Exchange,Information
+IV,Invoice,Commercial
+IS,Issue Sheet,Information
+MA,Manual,Operations
+MS,Method Statement,Safety
+MI,Minutes,Meeting
+MR,Model Rendition,BIM
+M2,2D Model,BIM
+M3,3D Model,BIM
+PT,Permit,Governance
+PH,Photograph,Media
+PL,Plan,Graphical
+PY,Policy,Governance
+PP,Presentation,Information
+PW,Process Workflow,Information
+PR,Programme,Management
+RG,Register,Information
+RP,Report,Information
+RD,Room Data Sheet,Technical
+SH,Schedule,Information
+SC,Schematic,Graphical
+SP,Specification,Technical
+SU,Survey,Survey
+TE,Template,Information
+VS,Visualisation,Media
+BR,Brief,Governance
+CP,Cost Plan,Cost
+CT,Cost Report,Cost
+FN,File Note,Information
+HS,Health and Safety,Safety
+IP,Inspection and Test Plan,Quality
+PD,Pricing Document,Commercial
+RE,Records,Governance
+SA,Schedule of Accommodation,Technical
+SK,Sketch,Graphical
+ST,Statutory Document,Governance
+TS,Technical Data Sheet,Technical
+TD,Tender Document,Commercial

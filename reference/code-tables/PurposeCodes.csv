@@ -1,0 +1,12 @@
+code,description,stage_group
+P00,Initiation,Pre-Design
+P01,Information,General
+P02,Coordination,Design
+P03,Planning Permission,Statutory
+P04,Fire Safety Certificate,Statutory
+P05,Disability Access Certificate,Statutory
+P06,Building Control Compliance,Statutory
+P07,Pre-Tender,Procurement
+P08,Tender,Procurement
+P09,Contract / Construction,Construction
+P10,Handover,Handover

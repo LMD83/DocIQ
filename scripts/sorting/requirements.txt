@@ -1,0 +1,18 @@
+# Free-tier dependencies for scripts/sorting/
+# Install with: pip install -r requirements.txt
+
+# Core text extraction (all free, local)
+pypdf==4.3.1
+python-docx==1.1.2
+openpyxl==3.1.5
+
+# OCR fallback (optional — only needed for --ocr-pass in content_extract.py)
+# Requires Tesseract binary installed separately:
+#   Windows: https://github.com/UB-Mannheim/tesseract/wiki
+#   (add tesseract.exe to PATH)
+# Requires Poppler for pdf2image:
+#   Windows: https://github.com/oschwartz10612/poppler-windows/releases
+#   (add bin/ to PATH)
+pytesseract==0.3.13
+pdf2image==1.17.0
+Pillow==10.4.0

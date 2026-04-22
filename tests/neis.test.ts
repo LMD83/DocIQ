@@ -21,7 +21,7 @@ import {
   viewTypeFromNumber,
   FIELD_WEIGHTS,
   CREDIBILITY_GATES,
-} from "../convex/neis/index.js";
+} from "../convex/docroute/neis/index.js";
 
 // ---------------------------------------------------------------------------
 // parseFilename — must behave identically to Python parse_filename

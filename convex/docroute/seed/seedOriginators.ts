@@ -1,18 +1,18 @@
 /**
- * Seed action — global originator registry entries.
+ * DocRoute seed action — global originator registry entries.
  *
  * Seeds the default set of Irish AEC organisations (HSE, OPW, Tusla, HIQA,
  * OGP). Per-customer originators are added through the application UI and
  * stored with an `orgId`; these global seeds are visible to every tenant.
  *
- * Idempotent — keyed by (orgId=null, code). Call from CLI:
+ * Idempotent — keyed by (orgId=undefined, code). Call from the GovIQ repo:
  *
- *     npm run seed:originators
+ *     npx convex run docroute/seed/seedOriginators:seedGlobal
  */
 
-import { internalAction, internalMutation } from "../_generated/server.js";
+import { internalAction, internalMutation } from "../../_generated/server.js";
 import { v } from "convex/values";
-import { internal } from "../_generated/api.js";
+import { internal } from "../../_generated/api.js";
 import { ORIGINATOR_SEEDS } from "./seedData.js";
 
 export const upsertGlobalOriginator = internalMutation({
@@ -24,7 +24,7 @@ export const upsertGlobalOriginator = internalMutation({
   },
   handler: async (ctx, { code, organisationName, type, notes }) => {
     const existing = await ctx.db
-      .query("originatorRegistry")
+      .query("dr_originatorRegistry")
       .withIndex("by_org_code", (q) => q.eq("orgId", undefined).eq("code", code))
       .first();
 
@@ -35,12 +35,12 @@ export const upsertGlobalOriginator = internalMutation({
         organisationName,
         type,
         notes,
-        status: existing.status, // preserve status on re-seed
+        status: existing.status,
       });
       return { id: existing._id, action: "updated" as const };
     }
 
-    const id = await ctx.db.insert("originatorRegistry", {
+    const id = await ctx.db.insert("dr_originatorRegistry", {
       orgId: undefined,
       code,
       organisationName,
@@ -60,12 +60,15 @@ export const seedGlobal = internalAction({
     let updated = 0;
 
     for (const entry of ORIGINATOR_SEEDS) {
-      const result = await ctx.runMutation(internal.seed.seedOriginators.upsertGlobalOriginator, {
-        code: entry.code,
-        organisationName: entry.organisationName,
-        type: entry.type,
-        notes: entry.notes,
-      });
+      const result = await ctx.runMutation(
+        internal.docroute.seed.seedOriginators.upsertGlobalOriginator,
+        {
+          code: entry.code,
+          organisationName: entry.organisationName,
+          type: entry.type,
+          notes: entry.notes,
+        },
+      );
       if (result.action === "created") seeded++;
       else updated++;
     }

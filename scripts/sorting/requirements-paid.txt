@@ -1,0 +1,12 @@
+# Optional paid add-ons — only needed if you run:
+#   content_extract_vision.py  (Claude vision on photos)
+#   content_extract_tier_b.py  (Claude structured extraction on documents)
+#
+# Install with:
+#   pip install -r requirements.txt -r requirements-paid.txt
+#
+# Both scripts require ANTHROPIC_API_KEY in env and default to
+# claude-haiku-4-5. Configure zero-retention on the key before processing
+# customer data: https://console.anthropic.com
+
+anthropic==0.40.0

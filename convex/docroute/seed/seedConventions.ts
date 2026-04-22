@@ -1,32 +1,32 @@
 /**
- * Seed action — NEIS + ISO 19650 conventions.
+ * DocRoute seed action — NEIS + ISO 19650 conventions.
  *
- * Idempotent: running twice won't duplicate. Keyed by (orgId=null, key) so
- * repeat runs upsert if the version changed. Call from CLI:
+ * Idempotent: running twice won't duplicate. Keyed by (orgId=undefined, key)
+ * so repeat runs upsert if the version changed. Call from the GovIQ repo CLI:
  *
- *     npm run seed:conventions
+ *     npx convex run docroute/seed/seedConventions:seedAll
+ *
+ * (Or via an npm script registered in the GovIQ root `package.json`.)
  *
  * For the first non-HSE customer, the ISO 19650 convention's code tables
  * must be populated before this seed is re-run.
  */
 
-import { internalAction, internalMutation } from "../_generated/server.js";
+import { internalAction, internalMutation } from "../../_generated/server.js";
 import { v } from "convex/values";
-import { internal } from "../_generated/api.js";
+import { internal } from "../../_generated/api.js";
 import { NEIS_CONVENTION, ISO_19650_CONVENTION } from "./seedData.js";
 
 /**
- * Internal mutation that upserts a convention by (orgId=null, key).
- * Extracted so the action can call it transactionally per convention.
+ * Internal mutation that upserts a convention by (orgId=undefined, key).
  */
 export const upsertGlobalConvention = internalMutation({
   args: {
-    convention: v.any(), // validated at schema level on insert/patch
+    convention: v.any(),
   },
   handler: async (ctx, { convention }) => {
-    // Look up existing global convention by key
     const existing = await ctx.db
-      .query("conventions")
+      .query("dr_conventions")
       .withIndex("by_org_key", (q) =>
         q.eq("orgId", undefined).eq("key", convention.key),
       )
@@ -35,7 +35,6 @@ export const upsertGlobalConvention = internalMutation({
     const now = Date.now();
 
     if (existing) {
-      // Upsert: overwrite version and fields (schema is data, not history)
       await ctx.db.patch(existing._id, {
         name: convention.name,
         version: convention.version,
@@ -51,7 +50,7 @@ export const upsertGlobalConvention = internalMutation({
       return { id: existing._id, action: "updated" as const };
     }
 
-    const id = await ctx.db.insert("conventions", {
+    const id = await ctx.db.insert("dr_conventions", {
       orgId: undefined,
       key: convention.key,
       name: convention.name,
@@ -80,12 +79,14 @@ export const seedAll = internalAction({
     neis: { id: string; action: "created" | "updated" };
     iso19650: { id: string; action: "created" | "updated" };
   }> => {
-    const neis = await ctx.runMutation(internal.seed.seedConventions.upsertGlobalConvention, {
-      convention: NEIS_CONVENTION,
-    });
-    const iso19650 = await ctx.runMutation(internal.seed.seedConventions.upsertGlobalConvention, {
-      convention: ISO_19650_CONVENTION,
-    });
+    const neis = await ctx.runMutation(
+      internal.docroute.seed.seedConventions.upsertGlobalConvention,
+      { convention: NEIS_CONVENTION },
+    );
+    const iso19650 = await ctx.runMutation(
+      internal.docroute.seed.seedConventions.upsertGlobalConvention,
+      { convention: ISO_19650_CONVENTION },
+    );
 
     console.log(`Seeded NEIS: ${neis.action} (${neis.id})`);
     console.log(`Seeded ISO 19650: ${iso19650.action} (${iso19650.id})`);

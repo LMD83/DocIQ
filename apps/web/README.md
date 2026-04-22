@@ -15,8 +15,11 @@ over black-box spinners.
 cd apps/web
 npm install
 npm run dev
-# -> http://localhost:3000 (redirects to /upload)
+# -> http://localhost:3001 (redirects to /upload)
 ```
+
+Port is fixed at **3001** so this app can run alongside another Next.js app
+on 3000. Change via `next dev -p <port>` if needed.
 
 Nothing else to set up — the upload surface uses a mock pipeline that runs
 entirely client-side, simulating the five-stage DocRoute ingest flow with

@@ -1,0 +1,27 @@
+{
+  "folders": [
+    {
+      "name": "DocIQ (root)",
+      "path": ".."
+    },
+    {
+      "name": "web (Next.js)",
+      "path": "../apps/web"
+    },
+    {
+      "name": "convex/docroute",
+      "path": "../convex/docroute"
+    },
+    {
+      "name": "scripts/sorting",
+      "path": "../scripts/sorting"
+    },
+    {
+      "name": "docs",
+      "path": "../docs"
+    }
+  ],
+  "settings": {
+    "typescript.tsdk": "apps/web/node_modules/typescript/lib"
+  }
+}
